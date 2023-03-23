@@ -1,0 +1,10 @@
+faiss_cpu
+numpy
+Pillow
+pytorch_lightning==1.8.2
+pytorch_metric_learning==2.0.0
+scikit_learn==1.2.2
+torch==1.12.1
+torchvision==0.14.1
+tqdm
+utm
