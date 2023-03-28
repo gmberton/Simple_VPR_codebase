@@ -29,11 +29,11 @@ def parse_arguments():
                         "preds for difficult queries, i.e. with uncorrect first prediction")
 
     # Paths parameters
-    parser.add_argument("--train_path", type=str, required=True,
+    parser.add_argument("--train_path", type=str, default="data/gsv_cities/train",
                         help="path to train set")
-    parser.add_argument("--val_path", type=str, required=True,
+    parser.add_argument("--val_path", type=str, default="data/sf_xs/val",
                         help="path to val set (must contain database and queries)")
-    parser.add_argument("--test_path", type=str, required=True,
+    parser.add_argument("--test_path", type=str, default="data/sf_xs/test",
                         help="path to test set (must contain database and queries)")
     
     args = parser.parse_args()
