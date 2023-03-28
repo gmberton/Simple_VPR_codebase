@@ -10,17 +10,17 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 import utils
 import parser
-import visualizations
 from datasets.test_dataset import TestDataset
 from datasets.train_dataset import TrainDataset
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, val_dataset, test_dataset, descriptors_dim=512, num_preds_to_save=0):
+    def __init__(self, val_dataset, test_dataset, descriptors_dim=512, num_preds_to_save=0, save_only_wrong_preds=True):
         super().__init__()
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
         self.num_preds_to_save = num_preds_to_save
+        self.save_only_wrong_preds = save_only_wrong_preds
         # Use a pretrained model
         self.model = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
         # Change the output of the FC layer to the desired descriptors dimension
@@ -100,7 +100,7 @@ def get_datasets_and_dataloaders(args):
         transform=train_transform
     )
     val_dataset = TestDataset(dataset_folder=args.val_path)
-    test_dataset = TestDataset(dataset_folder=args.val_path)
+    test_dataset = TestDataset(dataset_folder=args.test_path)
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False)
     test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False)
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     args = parser.parse_arguments()
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
-    model = LightningModel(val_dataset, test_dataset, args.descriptors_dim, args.num_preds_to_save)
+    model = LightningModel(val_dataset, test_dataset, args.descriptors_dim, args.num_preds_to_save, args.save_only_wrong_preds)
     
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(

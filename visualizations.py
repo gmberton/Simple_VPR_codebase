@@ -2,6 +2,7 @@
 import os
 import cv2
 import numpy as np
+from tqdm import tqdm
 from skimage.transform import rescale
 from PIL import Image, ImageDraw, ImageFont
 
@@ -38,7 +39,7 @@ def build_prediction_image(images_paths, preds_correct=None):
     For each image, if is_correct then draw a green/red box.
     """
     assert len(images_paths) == len(preds_correct)
-    labels = ["Query"] + [f"Pred {i}\n{is_correct}" for i, is_correct in enumerate(preds_correct[1:])]
+    labels = ["Query"] + [f"Pr{i} - {is_correct}" for i, is_correct in enumerate(preds_correct[1:])]
     num_images = len(images_paths)
     images = [np.array(Image.open(path)) for path in images_paths]
     for img, correct in zip(images, preds_correct):
@@ -63,7 +64,7 @@ def save_file_with_paths(query_path, preds_paths, positives_paths, output_path):
     file_content = []
     file_content.append("Query path:")
     file_content.append(query_path + "\n")
-    file_content.append("Preds paths:")
+    file_content.append("Predictions paths:")
     file_content.append("\n".join(preds_paths) + "\n")
     file_content.append("Positives paths:")
     file_content.append("\n".join(positives_paths) + "\n")
@@ -86,12 +87,12 @@ def save_preds(predictions, eval_ds, output_folder, save_only_wrong_preds=None):
     """
     positives_per_query = eval_ds.get_positives()
     os.makedirs(f"{output_folder}/preds", exist_ok=True)
-    for query_index, preds in enumerate(predictions):
+    for query_index, preds in enumerate(tqdm(predictions, ncols=80, desc=f"Saving preds in {output_folder}")):
         query_path = eval_ds.queries_paths[query_index]
         list_of_images_paths = [query_path]
         # List of None (query), True (correct preds) or False (wrong preds)
         preds_correct = [None]
-        for pred_index, pred in preds in enumerate(preds):
+        for pred_index, pred in enumerate(preds):
             pred_path = eval_ds.database_paths[pred]
             list_of_images_paths.append(pred_path)
             is_correct = pred in positives_per_query[query_index]
@@ -102,7 +103,7 @@ def save_preds(predictions, eval_ds, output_folder, save_only_wrong_preds=None):
         
         prediction_image = build_prediction_image(list_of_images_paths, preds_correct)
         pred_image_path = f"{output_folder}/preds/{query_index:03d}.jpg"
-        Image.fromarray(prediction_image).save(pred_image_path)
+        prediction_image.save(pred_image_path)
         
         positives_paths = [eval_ds.database_paths[idx] for idx in positives_per_query[query_index]]
         save_file_with_paths(
