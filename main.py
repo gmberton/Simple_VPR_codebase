@@ -116,7 +116,7 @@ if __name__ == '__main__':
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(
         monitor='R@1',
-        filename='_epoch({epoch:02d})_step({step:04d})_R@1[{pitts30k_val/R@1:.4f}]_R@5[{pitts30k_val/R@5:.4f}]',
+        filename='_epoch({epoch:02d})_step({step:04d})_R@1[{val/R@1:.4f}]_R@5[{val/R@5:.4f}]',
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=3,
