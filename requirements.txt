@@ -1,10 +1,9 @@
-faiss_cpu
-numpy
-Pillow
-pytorch_lightning==1.8.2
-pytorch_metric_learning==2.0.0
-scikit_learn==1.2.2
-torch==1.12.1
-torchvision==0.14.1
-tqdm
-utm
+--extra-index-url https://download.pytorch.org/whl/cu116
+
+torch==1.13.1+cu116 
+torchvision==0.14.1+cu116
+faiss-cpu==1.7.3
+pytorch-lightning==1.9.4
+pytorch-metric-learning==2.0.1
+opencv-python==4.7.0.72
+scikit-image==0.19.3
