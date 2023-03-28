@@ -10,15 +10,17 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 
 import utils
 import parser
+import visualizations
 from datasets.test_dataset import TestDataset
 from datasets.train_dataset import TrainDataset
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, val_dataset, test_dataset, descriptors_dim=512):
+    def __init__(self, val_dataset, test_dataset, descriptors_dim=512, num_preds_to_save=0):
         super().__init__()
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
+        self.num_preds_to_save = num_preds_to_save
         # Use a pretrained model
         self.model = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
         # Change the output of the FC layer to the desired descriptors dimension
@@ -69,19 +71,21 @@ class LightningModel(pl.LightningModule):
         return self.inference_epoch_end(all_descriptors, self.val_dataset)
 
     def test_epoch_end(self, all_descriptors):
-        return self.inference_epoch_end(all_descriptors, self.test_dataset)
+        return self.inference_epoch_end(all_descriptors, self.test_dataset, self.num_preds_to_save)
 
-    def inference_epoch_end(self, all_descriptors, inference_dataset):
+    def inference_epoch_end(self, all_descriptors, inference_dataset, num_preds_to_save=0):
         """all_descriptors contains database then queries descriptors"""
         all_descriptors = np.concatenate(all_descriptors)
         queries_descriptors = all_descriptors[inference_dataset.database_num : ]
         database_descriptors = all_descriptors[ : inference_dataset.database_num]
 
-        recalls, recalls_str = utils.compute_recalls(inference_dataset, queries_descriptors, database_descriptors)
+        recalls, recalls_str = utils.compute_recalls(
+            inference_dataset, queries_descriptors, database_descriptors,
+            trainer.logger.log_dir, num_preds_to_save, self.save_only_wrong_preds
+        )
         print(recalls_str)
-        self.log(f'R@1', recalls[0], prog_bar=False, logger=True)
-        self.log(f'R@5', recalls[1], prog_bar=False, logger=True)
-
+        self.log('R@1', recalls[0], prog_bar=False, logger=True)
+        self.log('R@5', recalls[1], prog_bar=False, logger=True)
 
 def get_datasets_and_dataloaders(args):
     train_transform = tfm.Compose([
@@ -107,7 +111,7 @@ if __name__ == '__main__':
     args = parser.parse_arguments()
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
-    model = LightningModel(val_dataset, test_dataset, args.descriptors_dim)
+    model = LightningModel(val_dataset, test_dataset, args.descriptors_dim, args.num_preds_to_save)
     
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(
@@ -123,7 +127,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=[0],
-        default_root_dir=f'./LOGS',  # Tensorflow can be used to viz
+        default_root_dir='./LOGS',  # Tensorflow can be used to viz
         num_sanity_val_steps=0,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         max_epochs=args.max_epochs,
@@ -135,3 +139,4 @@ if __name__ == '__main__':
     trainer.validate(model=model, dataloaders=val_loader)
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
     trainer.test(model=model, dataloaders=test_loader)
+
