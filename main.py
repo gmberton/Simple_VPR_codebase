@@ -139,6 +139,7 @@ def get_datasets_and_dataloaders(args):
     return train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader
 
 def default_agg_config(agg_arch='ConvAP'):
+    agg_config = {}
     if 'cosplace' in agg_arch.lower():
         agg_config={'in_dim': 2048,
                     'out_dim': 2048},
