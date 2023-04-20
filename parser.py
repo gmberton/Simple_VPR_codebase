@@ -37,16 +37,22 @@ def parse_arguments():
                         help="path to test set (must contain database and queries)")
     
     # Checkpoint (.ckpt) file path
-    parser.add_argument("--ckpt_path", type=str, # default="./LOGS/lightning_logs/version_x/checkpoints/_epoch(xx)_step(xxxxx)_R@1[0.0000]_R@5[0.0000].ckpt",
+    parser.add_argument("--ckpt_path", type=str,
                         help="path to the checkpoint (.ckpt) file that contains the pre-trained model")
 
     # Loss parameter
     parser.add_argument("--loss_name", type=str, default="MultiSimilarityLoss",
                         help="loss_name among the ones specified in utils/losses.py")
     
-    # Miner parameter
+    # Miner parameters
     parser.add_argument("--miner_name", type=str, default="MultiSimilarityMiner",
                         help="miner_name among the ones specified in utils/losses.py")
+    parser.add_argument("--miner_margin", type=float, default=0.1,
+                        help="miner_margin among the ones specified in utils/losses.py")
+    
+    # Aggregator parameters
+    parser.add_argument("--agg_arch", type=str, default="ConvAP",
+                        help="agg_arch among the ones specified in models/aggregators/")
 
     args = parser.parse_args()
     return args

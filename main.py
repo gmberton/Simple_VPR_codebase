@@ -13,12 +13,18 @@ import parser
 from datasets.test_dataset import TestDataset
 from datasets.train_dataset import TrainDataset
 
+# NEW
+from models import helper
 
 class LightningModel(pl.LightningModule):
     def __init__(self,
                 #---- Datasets
                 val_dataset,
                 test_dataset,
+
+                #---- Aggregator
+                agg_arch='ConvAP', #CosPlace, NetVLAD, GeM
+                agg_config={},
 
                 #---- Other options (?)
                 descriptors_dim=512,
@@ -28,8 +34,8 @@ class LightningModel(pl.LightningModule):
                 #---- Loss
                 loss_name='MultiSimilarityLoss', 
                 miner_name='MultiSimilarityMiner', 
-                miner_margin=0.1,
-                faiss_gpu=False
+                miner_margin=0.1
+                # faiss_gpu=False
                 ):
         super().__init__()
         self.val_dataset = val_dataset
@@ -48,6 +54,10 @@ class LightningModel(pl.LightningModule):
         self.loss_fn = utils.get_loss(loss_name)
         # OLD self.loss_fn = losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
 
+        # Change the pooling layer
+        self.model.avgpool = helper.get_aggregator(agg_arch, agg_config)
+
+        # TODO implement code for the miner
         # TODO implement code for the margin
 
     def forward(self, images):
@@ -133,22 +143,26 @@ if __name__ == '__main__':
     args = parser.parse_arguments()
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
-    print("CCCP: " + args.ckpt_path)
+
+    # TODO define agg_config
+
     model = (
             LightningModel(
             val_dataset, test_dataset,                          # Datasets
+            args.agg_arch, agg_config                           # Aggregator layer
             args.descriptors_dim,                               # Architecture
             args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
             args.loss_name,                                     # Loss
-            args.miner_name                                     # Miner
+            args.miner_name, args.miner_margin                  # Miner
         ) if args.ckpt_path == None else
             LightningModel.load_from_checkpoint(
             args.ckpt_path,                                     # Checkpoint file path
             val_dataset, test_dataset,                          # Datasets
+            args.agg_arch, agg_config                           # Aggregator layer
             args.descriptors_dim,                               # Architecture
             args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
             args.loss_name,                                     # Loss
-            args.miner_name                                     # Miner
+            args.miner_name, args.miner_margin                  # Miner
             )
     )
     
