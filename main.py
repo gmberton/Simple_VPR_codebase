@@ -144,13 +144,12 @@ def default_agg_config(agg_arch='ConvAP'):
     agg_config = {}
     if 'cosplace' in agg_arch.lower():
         agg_config={'in_dim': 2048,
-                    'out_dim': 2048},
+                    'out_dim': 2048}
     elif 'gem' in agg_arch.lower():
         agg_config={'p': 3},
     elif 'convap' in agg_arch.lower():
         agg_config={'in_channels': 2048,
-                    'out_channels': 2048},
-
+                    'out_channels': 2048}
     elif 'mixvpr' in agg_arch.lower():
         agg_config={'in_channels' : 1024,
                     'in_h' : 20,
@@ -158,7 +157,7 @@ def default_agg_config(agg_arch='ConvAP'):
                     'out_channels' : 1024,
                     'mix_depth' : 4,
                     'mlp_ratio' : 1,
-                    'out_rows' : 4}, # the output dim will be (out_rows * out_channels)
+                    'out_rows' : 4} # the output dim will be (out_rows * out_channels)
     return agg_config
 
 if __name__ == '__main__':
