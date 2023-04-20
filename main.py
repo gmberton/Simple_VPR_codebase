@@ -15,18 +15,40 @@ from datasets.train_dataset import TrainDataset
 
 
 class LightningModel(pl.LightningModule):
-    def __init__(self, val_dataset, test_dataset, descriptors_dim=512, num_preds_to_save=0, save_only_wrong_preds=True):
+    def __init__(self,
+                #---- Datasets
+                val_dataset,
+                test_dataset,
+
+                #---- Other options (?)
+                descriptors_dim=512,
+                num_preds_to_save=0,
+                save_only_wrong_preds=True,
+                
+                #---- Loss
+                loss_name='MultiSimilarityLoss', 
+                miner_name='MultiSimilarityMiner', 
+                miner_margin=0.1,
+                faiss_gpu=False
+                ):
         super().__init__()
         self.val_dataset = val_dataset
         self.test_dataset = test_dataset
         self.num_preds_to_save = num_preds_to_save
         self.save_only_wrong_preds = save_only_wrong_preds
+
         # Use a pretrained model
         self.model = torchvision.models.resnet18(weights=torchvision.models.ResNet18_Weights.DEFAULT)
+
         # Change the output of the FC layer to the desired descriptors dimension
         self.model.fc = torch.nn.Linear(self.model.fc.in_features, descriptors_dim)
+
         # Set the loss function
-        self.loss_fn = losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
+        self.loss_name = loss_name
+        self.loss_fn = utils.get_loss(loss_name)
+        # OLD self.loss_fn = losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
+
+        # TODO implement code for the margin
 
     def forward(self, images):
         descriptors = self.model(images)
@@ -111,7 +133,24 @@ if __name__ == '__main__':
     args = parser.parse_arguments()
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
-    model = LightningModel(val_dataset, test_dataset, args.descriptors_dim, args.num_preds_to_save, args.save_only_wrong_preds)
+    print("CCCP: " + args.ckpt_path)
+    model = (
+            LightningModel(
+            val_dataset, test_dataset,                          # Datasets
+            args.descriptors_dim,                               # Architecture
+            args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
+            args.loss_name,                                     # Loss
+            args.miner_name                                     # Miner
+        ) if args.ckpt_path == None else
+            LightningModel.load_from_checkpoint(
+            args.ckpt_path,                                     # Checkpoint file path
+            val_dataset, test_dataset,                          # Datasets
+            args.descriptors_dim,                               # Architecture
+            args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
+            args.loss_name,                                     # Loss
+            args.miner_name                                     # Miner
+            )
+    )
     
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(
@@ -127,16 +166,17 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=[0],
-        default_root_dir='./LOGS',  # Tensorflow can be used to viz
-        num_sanity_val_steps=0,  # runs a validation step before stating training
-        precision=16,  # we use half precision to reduce  memory usage
+        default_root_dir='./LOGS',              # Tensorflow can be used to viz
+        num_sanity_val_steps=0,                 # runs a validation step before stating training
+        precision=16,                           # we use half precision to reduce  memory usage
         max_epochs=args.max_epochs,
-        check_val_every_n_epoch=1,  # run validation every epoch
-        callbacks=[checkpoint_cb],  # we only run the checkpointing callback (you can add more)
-        reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
+        check_val_every_n_epoch=1,              # run validation every epoch
+        callbacks=[checkpoint_cb],              # we only run the checkpointing callback (you can add more)
+        reload_dataloaders_every_n_epochs=1,    # we reload the dataset to shuffle the order
         log_every_n_steps=20,
     )
-    trainer.validate(model=model, dataloaders=val_loader)
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    if(args.ckpt_path == None):
+        trainer.validate(model=model, dataloaders=val_loader)
+        trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
     trainer.test(model=model, dataloaders=test_loader)
 
