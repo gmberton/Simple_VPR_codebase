@@ -138,18 +138,38 @@ def get_datasets_and_dataloaders(args):
     test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False)
     return train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader
 
+def default_agg_config(agg_arch='ConvAP'):
+    if 'cosplace' in agg_arch.lower():
+        agg_config={'in_dim': 2048,
+                    'out_dim': 2048},
+    elif 'gem' in agg_arch.lower():
+        agg_config={'p': 3},
+    elif 'convap' in agg_arch.lower():
+        agg_config={'in_channels': 2048,
+                    'out_channels': 2048},
+
+    elif 'mixvpr' in agg_arch.lower():
+        agg_config={'in_channels' : 1024,
+                    'in_h' : 20,
+                    'in_w' : 20,
+                    'out_channels' : 1024,
+                    'mix_depth' : 4,
+                    'mlp_ratio' : 1,
+                    'out_rows' : 4}, # the output dim will be (out_rows * out_channels)
+    return agg_config
 
 if __name__ == '__main__':
     args = parser.parse_arguments()
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
 
-    # TODO define agg_config
+    # Define a personalized agg_config if you want
+    agg_config = default_agg_config(args.agg_arch)
 
     model = (
             LightningModel(
             val_dataset, test_dataset,                          # Datasets
-            args.agg_arch, agg_config                           # Aggregator layer
+            args.agg_arch, agg_config,                          # Aggregator layer
             args.descriptors_dim,                               # Architecture
             args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
             args.loss_name,                                     # Loss
@@ -158,7 +178,7 @@ if __name__ == '__main__':
             LightningModel.load_from_checkpoint(
             args.ckpt_path,                                     # Checkpoint file path
             val_dataset, test_dataset,                          # Datasets
-            args.agg_arch, agg_config                           # Aggregator layer
+            args.agg_arch, agg_config,                          # Aggregator layer
             args.descriptors_dim,                               # Architecture
             args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
             args.loss_name,                                     # Loss
