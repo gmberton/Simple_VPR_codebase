@@ -81,7 +81,7 @@ class LightningModel(pl.LightningModule):
         labels = labels.view(num_places * num_images_per_place)
 
         # Feed forward the batch to the model
-        descriptors = self(images)  # Here we are calling the method forward that we defined above
+        descriptors = self(images)                      # Here we are calling the method forward that we defined above
         loss = self.loss_function(descriptors, labels)  # Call the loss_function we defined above
         
         self.log('loss', loss.item(), logger=True)
@@ -118,6 +118,8 @@ class LightningModel(pl.LightningModule):
         print(recalls_str)
         self.log('R@1', recalls[0], prog_bar=False, logger=True)
         self.log('R@5', recalls[1], prog_bar=False, logger=True)
+        self.log('R@10', recalls[2], prog_bar=False, logger=True)
+        self.log('R@20', recalls[3], prog_bar=False, logger=True)
 
 def get_datasets_and_dataloaders(args):
     train_transform = tfm.Compose([
