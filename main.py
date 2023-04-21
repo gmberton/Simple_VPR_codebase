@@ -64,6 +64,8 @@ class LightningModel(pl.LightningModule):
 
         self.miner = utils.get_miner(miner_name, miner_margin)
 
+        self.batch_acc = [] # we will keep track of the % of trivial pairs/triplets at the loss level 
+
         # Change the pooling layer
         self.model.avgpool = helper.get_aggregator(agg_arch, agg_config)
 
@@ -84,7 +86,6 @@ class LightningModel(pl.LightningModule):
     
     # NEW
     def loss_function(self, descriptors, labels):
-        loss
         # we mine the pairs/triplets if there is an online mining strategy
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
@@ -157,8 +158,8 @@ class LightningModel(pl.LightningModule):
             trainer.logger.log_dir, num_preds_to_save, self.save_only_wrong_preds
         )
         print(recalls_str)
-        self.log('R@1', recalls[0], prog_bar=False, logger=True)
-        self.log('R@5', recalls[1], prog_bar=False, logger=True)
+        self.log('R@01', recalls[0], prog_bar=False, logger=True)
+        self.log('R@05', recalls[1], prog_bar=False, logger=True)
         self.log('R@10', recalls[2], prog_bar=False, logger=True)
         self.log('R@20', recalls[3], prog_bar=False, logger=True)
 
@@ -191,8 +192,8 @@ def default_agg_config(agg_arch='ConvAP'):
     elif 'gem' in agg_arch.lower():
         agg_config={'p': 3},
     elif 'convap' in agg_arch.lower():
-        agg_config={'in_channels': 2048,
-                    'out_channels': 2048}
+        agg_config={'in_channels': 512,     # OLD 2048
+                    'out_channels': 512}    # OLD 2048
     elif 'mixvpr' in agg_arch.lower():
         agg_config={'in_channels' : 1024,
                     'in_h' : 20,
