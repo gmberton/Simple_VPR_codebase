@@ -49,15 +49,24 @@ class LightningModel(pl.LightningModule):
         # Change the output of the FC layer to the desired descriptors dimension
         self.model.fc = torch.nn.Linear(self.model.fc.in_features, descriptors_dim)
 
+        # OLD self.loss_fn = losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
+        # OLD self.avgpool = torch.nn.AdaptiveAvgPool2d((1, 1))
+
+        # NEW
         # Set the loss function
         self.loss_name = loss_name
+
         self.loss_fn = utils.get_loss(loss_name)
-        # OLD self.loss_fn = losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
+        
+        # Set the miner function
+        self.miner_name = miner_name
+        self.miner_margin = miner_margin
+
+        self.miner = utils.get_miner(miner_name, miner_margin)
 
         # Change the pooling layer
         self.model.avgpool = helper.get_aggregator(agg_arch, agg_config)
 
-        # TODO implement code for the miner
         # TODO implement code for the margin
 
     def forward(self, images):
@@ -71,6 +80,38 @@ class LightningModel(pl.LightningModule):
     #  The loss function call (this method will be called at each training iteration)
     def loss_function(self, descriptors, labels):
         loss = self.loss_fn(descriptors, labels)
+        return loss
+    
+    # NEW
+    def loss_function(self, descriptors, labels):
+        loss
+        # we mine the pairs/triplets if there is an online mining strategy
+        if self.miner is not None:
+            miner_outputs = self.miner(descriptors, labels)
+            loss = self.loss_fn(descriptors, labels, miner_outputs)
+            
+            # calculate the % of trivial pairs/triplets 
+            # which do not contribute in the loss value
+            nb_samples = descriptors.shape[0]
+            nb_mined = len(set(miner_outputs[0].detach().cpu().numpy()))
+            batch_acc = 1.0 - (nb_mined/nb_samples)
+
+        else: # no online mining
+            loss = self.loss_fn(descriptors, labels)
+            batch_acc = 0.0
+            if type(loss) == tuple: 
+                # somes losses do the online mining inside (they don't need a miner objet), 
+                # so they return the loss and the batch accuracy
+                # for example, if you are developping a new loss function, you might be better
+                # doing the online mining strategy inside the forward function of the loss class, 
+                # and return a tuple containing the loss value and the batch_accuracy (the % of valid pairs or triplets)
+                loss, batch_acc = loss
+
+        # keep accuracy of every batch and later reset it at epoch start
+        self.batch_acc.append(batch_acc)
+        # log it
+        self.log('b_acc', sum(self.batch_acc) /
+                len(self.batch_acc), prog_bar=True, logger=True)
         return loss
 
     # This is the training step that's executed at each iteration
@@ -139,6 +180,8 @@ def get_datasets_and_dataloaders(args):
     val_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False)
     test_loader = DataLoader(dataset=test_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False)
     return train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader
+
+# NEW METHOD
 
 def default_agg_config(agg_arch='ConvAP'):
     agg_config = {}

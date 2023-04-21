@@ -36,6 +36,8 @@ def parse_arguments():
     parser.add_argument("--test_path", type=str, default="data/sf_xs/test",
                         help="path to test set (must contain database and queries)")
     
+    # NEW ARGS
+
     # Checkpoint (.ckpt) file path
     parser.add_argument("--ckpt_path", type=str,
                         help="path to the checkpoint (.ckpt) file that contains the pre-trained model")

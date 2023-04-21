@@ -12,7 +12,8 @@ class ConvAP(nn.Module):
         s1 (int, optional): spatial height of the adaptive average pooling. Defaults to 2.
         s2 (int, optional): spatial width of the adaptive average pooling. Defaults to 2.
     """
-    def __init__(self, in_channels, out_channels=512, s1=2, s2=2):
+    # OLD def __init__(self, in_channels, out_channels=512, s1=2, s2=2):
+    def __init__(self, in_channels, out_channels=512, s1=1, s2=1):
         super(ConvAP, self).__init__()
         self.channel_pool = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True)
         self.AAP = nn.AdaptiveAvgPool2d((s1, s2))
