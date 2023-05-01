@@ -190,7 +190,7 @@ def default_agg_config(agg_arch='ConvAP'):
         agg_config={'in_dim': 2048,
                     'out_dim': 2048}
     elif 'gem' in agg_arch.lower():
-        agg_config={'p': 3},
+        agg_config={'p': 3}
     elif 'convap' in agg_arch.lower():
         agg_config={'in_channels': 512,     # OLD 2048
                     'out_channels': 512}    # OLD 2048
@@ -212,30 +212,19 @@ if __name__ == '__main__':
     # Define a personalized agg_config if you want
     agg_config = default_agg_config(args.agg_arch)
 
-    model = (
-            LightningModel(
+    model = LightningModel(
             val_dataset, test_dataset,                          # Datasets
             args.agg_arch, agg_config,                          # Aggregator layer
             args.descriptors_dim,                               # Architecture
             args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
             args.loss_name,                                     # Loss
             args.miner_name, args.miner_margin                  # Miner
-        ) if args.ckpt_path == None else
-            LightningModel.load_from_checkpoint(
-            args.ckpt_path,                                     # Checkpoint file path
-            val_dataset, test_dataset,                          # Datasets
-            args.agg_arch, agg_config,                          # Aggregator layer
-            args.descriptors_dim,                               # Architecture
-            args.num_preds_to_save, args.save_only_wrong_preds, # Visualizations parameters
-            args.loss_name,                                     # Loss
-            args.miner_name, args.miner_margin                  # Miner
-            )
-    )
+        )
     
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(
-        monitor='R@1',
-        filename='_epoch({epoch:02d})_step({step:04d})_R@1[{val/R@1:.4f}]_R@5[{val/R@5:.4f}]',
+        monitor='R@01',
+        filename='_epoch({epoch:02d})_step({step:04d})_R@1[{val/R@01:.4f}]_R@5[{val/R@05:.4f}]',
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=3,
@@ -258,5 +247,7 @@ if __name__ == '__main__':
     if(args.ckpt_path == None):
         trainer.validate(model=model, dataloaders=val_loader)
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    trainer.test(model=model, dataloaders=test_loader)
+        trainer.test(model=model, dataloaders=test_loader)
+    else:
+        trainer.test(model=model, dataloaders=test_loader, ckpt_path=args.ckpt_path)
 
