@@ -7,3 +7,5 @@ pytorch-lightning==1.9.4
 pytorch-metric-learning==2.0.1
 opencv-python==4.7.0.72
 scikit-image==0.19.3
+googledrivedownloader==0.4
+gdown==4.7.1

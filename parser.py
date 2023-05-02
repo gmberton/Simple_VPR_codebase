@@ -4,6 +4,12 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # experiment
+    parser.add_argument("--exp_name", type=str, default="default",
+                        help="exp name")
+    parser.add_argument("--checkpoint", type=str, default=None,
+                        help="checkpoint path")
+
     # Training parameters
     parser.add_argument("--batch_size", type=int, default=64,
                         help="The number of places to use per iteration (one place is N images)")

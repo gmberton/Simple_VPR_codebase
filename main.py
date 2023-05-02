@@ -7,6 +7,9 @@ from torchvision import transforms as tfm
 from pytorch_metric_learning import losses
 from torch.utils.data.dataloader import DataLoader
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning import loggers as pl_loggers
+import logging
+from os.path import join
 
 import utils
 import parser
@@ -68,12 +71,12 @@ class LightningModel(pl.LightningModule):
         return self.inference_step(batch)
 
     def validation_epoch_end(self, all_descriptors):
-        return self.inference_epoch_end(all_descriptors, self.val_dataset)
+        return self.inference_epoch_end(all_descriptors, self.val_dataset, 'val')
 
     def test_epoch_end(self, all_descriptors):
-        return self.inference_epoch_end(all_descriptors, self.test_dataset, self.num_preds_to_save)
+        return self.inference_epoch_end(all_descriptors, self.test_dataset, 'test', self.num_preds_to_save)
 
-    def inference_epoch_end(self, all_descriptors, inference_dataset, num_preds_to_save=0):
+    def inference_epoch_end(self, all_descriptors, inference_dataset, split, num_preds_to_save=0):
         """all_descriptors contains database then queries descriptors"""
         all_descriptors = np.concatenate(all_descriptors)
         queries_descriptors = all_descriptors[inference_dataset.database_num : ]
@@ -81,11 +84,14 @@ class LightningModel(pl.LightningModule):
 
         recalls, recalls_str = utils.compute_recalls(
             inference_dataset, queries_descriptors, database_descriptors,
-            trainer.logger.log_dir, num_preds_to_save, self.save_only_wrong_preds
+            self.logger.log_dir, num_preds_to_save, self.save_only_wrong_preds
         )
-        print(recalls_str)
-        self.log('R@1', recalls[0], prog_bar=False, logger=True)
-        self.log('R@5', recalls[1], prog_bar=False, logger=True)
+        # print(recalls_str)
+        logging.info(f"Epoch[{self.current_epoch:02d}]): " +
+                      f"recalls: {recalls_str}")
+    
+        self.log(f'{split}/R@1', recalls[0], prog_bar=False, logger=True)
+        self.log(f'{split}/R@5', recalls[1], prog_bar=False, logger=True)
 
 def get_datasets_and_dataloaders(args):
     train_transform = tfm.Compose([
@@ -109,34 +115,39 @@ def get_datasets_and_dataloaders(args):
 
 if __name__ == '__main__':
     args = parser.parse_arguments()
+    utils.setup_logging(join('logs', 'lightning_logs', args.exp_name), console='info')
 
     train_dataset, val_dataset, test_dataset, train_loader, val_loader, test_loader = get_datasets_and_dataloaders(args)
     model = LightningModel(val_dataset, test_dataset, args.descriptors_dim, args.num_preds_to_save, args.save_only_wrong_preds)
     
     # Model params saving using Pytorch Lightning. Save the best 3 models according to Recall@1
     checkpoint_cb = ModelCheckpoint(
-        monitor='R@1',
-        filename='_epoch({epoch:02d})_step({step:04d})_R@1[{val/R@1:.4f}]_R@5[{val/R@5:.4f}]',
+        monitor='val/R@1',
+        filename='_epoch({epoch:02d})_R@1[{val/R@1:.4f}]_R@5[{val/R@5:.4f}]',
         auto_insert_metric_name=False,
-        save_weights_only=True,
-        save_top_k=3,
+        save_weights_only=False,
+        save_top_k=1,
+        save_last=True,
         mode='max'
     )
+
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir="logs/", version=args.exp_name)
 
     # Instantiate a trainer
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=[0],
-        default_root_dir='./LOGS',  # Tensorflow can be used to viz
+        default_root_dir='./logs',  # Tensorflow can be used to viz
         num_sanity_val_steps=0,  # runs a validation step before stating training
         precision=16,  # we use half precision to reduce  memory usage
         max_epochs=args.max_epochs,
         check_val_every_n_epoch=1,  # run validation every epoch
+        logger=tb_logger, # log through tensorboard
         callbacks=[checkpoint_cb],  # we only run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
     )
-    trainer.validate(model=model, dataloaders=val_loader)
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    trainer.test(model=model, dataloaders=test_loader)
+    trainer.validate(model=model, dataloaders=val_loader, ckpt_path=args.checkpoint)
+    trainer.fit(model=model, ckpt_path=args.checkpoint, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer.test(model=model, dataloaders=test_loader, ckpt_path='best')
 
