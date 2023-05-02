@@ -67,7 +67,8 @@ class LightningModel(pl.LightningModule):
         self.batch_acc = [] # we will keep track of the % of trivial pairs/triplets at the loss level 
 
         # Change the pooling layer
-        self.model.avgpool = helper.get_aggregator(agg_arch, agg_config)
+        if agg_arch.lower() != "avgpool":
+            self.model.avgpool = helper.get_aggregator(agg_arch, agg_config)
 
         # TODO implement code for the margin
 
