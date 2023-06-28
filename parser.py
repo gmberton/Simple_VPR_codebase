@@ -38,6 +38,10 @@ def parse_arguments():
     
     # NEW ARGS
 
+    # Experiment name
+    parser.add_argument("--exp_name", type=str, default="default",
+                        help="exp name")
+
     # Checkpoint (.ckpt) file path
     parser.add_argument("--ckpt_path", type=str,
                         help="path to the checkpoint (.ckpt) file that contains the pre-trained model")

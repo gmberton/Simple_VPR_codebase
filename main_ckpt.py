@@ -214,10 +214,6 @@ def default_agg_config(agg_arch='ConvAP'):
     if 'cosplace' in agg_arch.lower():
         agg_config={'in_dim': 512,          # OLD 2048
                     'out_dim': 512}         # OLD 2048
-    elif 'convgem' in agg_arch.lower():
-        agg_config={'in_channels': 512,
-                    'out_channels': 512,
-                    'p': 3}
     elif 'gem' in agg_arch.lower():
         agg_config={'p': 3}
     elif 'convap' in agg_arch.lower():
@@ -278,10 +274,8 @@ if __name__ == '__main__':
         reload_dataloaders_every_n_epochs=1,    # we reload the dataset to shuffle the order
         log_every_n_steps=20,
     )
-    if(args.ckpt_path == None):
-        trainer.validate(model=model, dataloaders=val_loader)
-        trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-        trainer.test(model=model, dataloaders=test_loader)
-    else:
-        trainer.test(model=model, dataloaders=test_loader, ckpt_path=args.ckpt_path)
+
+    trainer.validate(model=model, dataloaders=val_loader, ckpt_path=args.ckpt_path)
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=args.ckpt_path)
+    trainer.test(model=model, dataloaders=test_loader, ckpt_path="best")
 

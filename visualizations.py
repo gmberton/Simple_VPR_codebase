@@ -17,7 +17,7 @@ SPACE = 50  # Space between two images
 
 def write_labels_to_image(labels=["text1", "text2"]):
     """Creates an image with vertical text, spaced along rows."""
-    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", FONTSIZE)
+    font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", FONTSIZE)
     img = Image.new('RGB', ((W * len(labels)) + 50 * (len(labels)-1), TEXT_H), (1, 1, 1))
     d = ImageDraw.Draw(img)
     for i, text in enumerate(labels):

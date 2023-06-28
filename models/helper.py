@@ -16,6 +16,14 @@ def get_aggregator(agg_arch='ConvAP', agg_config={}):
         assert 'in_dim' in agg_config
         assert 'out_dim' in agg_config
         return aggregators.CosPlace(**agg_config)
+    
+    elif 'convgem' in agg_arch.lower():
+        assert 'in_channels' in agg_config
+        if not agg_config['p']:
+            agg_config['p'] = 3
+        else:
+            assert 'p' in agg_config
+        return aggregators.ConvGeM(**agg_config)
 
     elif 'gem' in agg_arch.lower():
         if agg_config == {}:
